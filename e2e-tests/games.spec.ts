@@ -33,27 +33,67 @@ test.describe('Game Listing and Navigation', () => {
     const gameCards = page.getByTestId('game-card');
     const filterableGames = page.locator('[data-filterable-game]');
     const initialCount = await filterableGames.count();
+    let categoryValue: string | undefined;
+    let secondCategoryValue: string | undefined;
 
     await test.step('Filter by a category', async () => {
-      const categoryValue = await filterableGames.first().getAttribute('data-game-category-id');
-      expect(categoryValue).not.toBeNull();
+      const categoryValues = await filterableGames.evaluateAll((cards) => (
+        cards.map((card) => card.getAttribute('data-game-category-id') ?? '')
+      ));
+      categoryValue = categoryValues.find((value) => (
+        value !== '' && categoryValues.filter((candidate) => candidate === value).length < initialCount
+      ));
+      expect(categoryValue).toBeDefined();
       await categoryFilter.selectOption([categoryValue!]);
 
       const visibleCards = page.locator('[data-filterable-game]:not(.hidden) [data-testid="game-card"]');
-      await expect(visibleCards).not.toHaveCount(0);
+      const expectedVisibleCount = categoryValues.filter((value) => value === categoryValue).length;
+      await expect(visibleCards).toHaveCount(expectedVisibleCount);
+      await expect(page.locator('[data-filterable-game].hidden')).toHaveCount(initialCount - expectedVisibleCount);
       await expect(page.getByTestId('filter-results-count')).toContainText('Showing');
+    });
+
+    await test.step('Support multiple categories with OR behavior', async () => {
+      const categoryOptions = await categoryFilter.locator('option').evaluateAll((options) => (
+        options.map((option) => option.getAttribute('value') ?? '').filter(Boolean)
+      ));
+      secondCategoryValue = categoryOptions.find((value) => value !== categoryValue);
+      expect(secondCategoryValue).toBeDefined();
+      await categoryFilter.selectOption([categoryValue!, secondCategoryValue!]);
+
+      const visibleCards = page.locator('[data-filterable-game]:not(.hidden)');
+      const expectedVisibleCount = await filterableGames.evaluateAll(
+        (cards, selectedCategories) => cards.filter((card) => (
+          selectedCategories.includes(card.getAttribute('data-game-category-id') ?? '')
+        )).length,
+        [categoryValue!, secondCategoryValue!],
+      );
+      await expect(visibleCards).toHaveCount(expectedVisibleCount);
+      await expect(page.locator('[data-filterable-game].hidden')).toHaveCount(initialCount - expectedVisibleCount);
     });
 
     await test.step('Combine category and publisher filters', async () => {
       const publisherValue = await filterableGames
-        .filter({ has: page.locator('[data-testid="game-card"]') })
+        .filter({ has: page.locator('[data-testid="game-card"]:visible') })
         .first()
         .getAttribute('data-game-publisher-id');
       expect(publisherValue).not.toBeNull();
       await publisherFilter.selectOption(publisherValue!);
 
       await expect(page.getByTestId('filter-results-count')).toContainText('Showing');
-      await expect(page.locator('[data-filterable-game]:not(.hidden)')).not.toHaveCount(0);
+      const visibleCards = page.locator('[data-filterable-game]:not(.hidden)');
+      const expectedCombinedCount = await filterableGames.evaluateAll(
+        (cards, filters) => cards.filter((card) => {
+          const category = card.getAttribute('data-game-category-id');
+          const publisher = card.getAttribute('data-game-publisher-id');
+          return filters.categories.includes(category ?? '') && publisher === filters.publisher;
+        }).length,
+        {
+          categories: [categoryValue!, secondCategoryValue!],
+          publisher: publisherValue!,
+        },
+      );
+      await expect(visibleCards).toHaveCount(expectedCombinedCount);
     });
 
     await test.step('Clear filters and restore all games', async () => {
