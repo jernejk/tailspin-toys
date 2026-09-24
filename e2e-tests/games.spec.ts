@@ -24,6 +24,86 @@ test.describe('Game Listing and Navigation', () => {
     });
   });
 
+  test('should filter games by category and publisher', async ({ page }) => {
+    await page.goto('/');
+    await expect(page.getByTestId('games-grid')).toBeVisible();
+
+    const categoryFilter = page.getByTestId('category-filter');
+    const publisherFilter = page.getByTestId('publisher-filter');
+    const gameCards = page.getByTestId('game-card');
+    const filterableGames = page.locator('[data-filterable-game]');
+    const initialCount = await filterableGames.count();
+    let categoryValue: string | undefined;
+    let secondCategoryValue: string | undefined;
+
+    await test.step('Filter by a category', async () => {
+      const categoryValues = await filterableGames.evaluateAll((cards) => (
+        cards.map((card) => card.getAttribute('data-game-category-id') ?? '')
+      ));
+      categoryValue = categoryValues.find((value) => (
+        value !== '' && categoryValues.filter((candidate) => candidate === value).length < initialCount
+      ));
+      expect(categoryValue).toBeDefined();
+      await categoryFilter.selectOption([categoryValue!]);
+
+      const visibleCards = page.locator('[data-filterable-game]:not(.hidden) [data-testid="game-card"]');
+      const expectedVisibleCount = categoryValues.filter((value) => value === categoryValue).length;
+      await expect(visibleCards).toHaveCount(expectedVisibleCount);
+      await expect(page.locator('[data-filterable-game].hidden')).toHaveCount(initialCount - expectedVisibleCount);
+      await expect(page.getByTestId('filter-results-count')).toContainText('Showing');
+    });
+
+    await test.step('Support multiple categories with OR behavior', async () => {
+      const categoryOptions = await categoryFilter.locator('option').evaluateAll((options) => (
+        options.map((option) => option.getAttribute('value') ?? '').filter(Boolean)
+      ));
+      secondCategoryValue = categoryOptions.find((value) => value !== categoryValue);
+      expect(secondCategoryValue).toBeDefined();
+      await categoryFilter.selectOption([categoryValue!, secondCategoryValue!]);
+
+      const visibleCards = page.locator('[data-filterable-game]:not(.hidden)');
+      const expectedVisibleCount = await filterableGames.evaluateAll(
+        (cards, selectedCategories) => cards.filter((card) => (
+          selectedCategories.includes(card.getAttribute('data-game-category-id') ?? '')
+        )).length,
+        [categoryValue!, secondCategoryValue!],
+      );
+      await expect(visibleCards).toHaveCount(expectedVisibleCount);
+      await expect(page.locator('[data-filterable-game].hidden')).toHaveCount(initialCount - expectedVisibleCount);
+    });
+
+    await test.step('Combine category and publisher filters', async () => {
+      const publisherValue = await filterableGames
+        .filter({ has: page.locator('[data-testid="game-card"]:visible') })
+        .first()
+        .getAttribute('data-game-publisher-id');
+      expect(publisherValue).not.toBeNull();
+      await publisherFilter.selectOption(publisherValue!);
+
+      await expect(page.getByTestId('filter-results-count')).toContainText('Showing');
+      const visibleCards = page.locator('[data-filterable-game]:not(.hidden)');
+      const expectedCombinedCount = await filterableGames.evaluateAll(
+        (cards, filters) => cards.filter((card) => {
+          const category = card.getAttribute('data-game-category-id');
+          const publisher = card.getAttribute('data-game-publisher-id');
+          return filters.categories.includes(category ?? '') && publisher === filters.publisher;
+        }).length,
+        {
+          categories: [categoryValue!, secondCategoryValue!],
+          publisher: publisherValue!,
+        },
+      );
+      await expect(visibleCards).toHaveCount(expectedCombinedCount);
+    });
+
+    await test.step('Clear filters and restore all games', async () => {
+      await page.getByTestId('clear-filters').click();
+      await expect(page.getByTestId('filtered-empty-state')).toBeHidden();
+      await expect(page.getByTestId('filter-results-count')).toHaveText(`Showing ${initialCount} games`);
+      await expect(gameCards).toHaveCount(initialCount);
+    });
+  });
+
   test('should navigate to correct game details page when clicking on a game', async ({ page }) => {
     let gameId: string | null;
     let gameTitle: string | null;
