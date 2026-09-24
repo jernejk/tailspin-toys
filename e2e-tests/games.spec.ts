@@ -24,6 +24,46 @@ test.describe('Game Listing and Navigation', () => {
     });
   });
 
+  test('should filter games by category and publisher', async ({ page }) => {
+    await page.goto('/');
+    await expect(page.getByTestId('games-grid')).toBeVisible();
+
+    const categoryFilter = page.getByTestId('category-filter');
+    const publisherFilter = page.getByTestId('publisher-filter');
+    const gameCards = page.getByTestId('game-card');
+    const filterableGames = page.locator('[data-filterable-game]');
+    const initialCount = await filterableGames.count();
+
+    await test.step('Filter by a category', async () => {
+      const categoryValue = await filterableGames.first().getAttribute('data-game-category-id');
+      expect(categoryValue).not.toBeNull();
+      await categoryFilter.selectOption([categoryValue!]);
+
+      const visibleCards = page.locator('[data-filterable-game]:not(.hidden) [data-testid="game-card"]');
+      await expect(visibleCards).not.toHaveCount(0);
+      await expect(page.getByTestId('filter-results-count')).toContainText('Showing');
+    });
+
+    await test.step('Combine category and publisher filters', async () => {
+      const publisherValue = await filterableGames
+        .filter({ has: page.locator('[data-testid="game-card"]') })
+        .first()
+        .getAttribute('data-game-publisher-id');
+      expect(publisherValue).not.toBeNull();
+      await publisherFilter.selectOption(publisherValue!);
+
+      await expect(page.getByTestId('filter-results-count')).toContainText('Showing');
+      await expect(page.locator('[data-filterable-game]:not(.hidden)')).not.toHaveCount(0);
+    });
+
+    await test.step('Clear filters and restore all games', async () => {
+      await page.getByTestId('clear-filters').click();
+      await expect(page.getByTestId('filtered-empty-state')).toBeHidden();
+      await expect(page.getByTestId('filter-results-count')).toHaveText(`Showing ${initialCount} games`);
+      await expect(gameCards).toHaveCount(initialCount);
+    });
+  });
+
   test('should navigate to correct game details page when clicking on a game', async ({ page }) => {
     let gameId: string | null;
     let gameTitle: string | null;
