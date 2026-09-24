@@ -20,6 +20,12 @@ Refer to technology-specific instruction files:
 
 ## Core Principles
 
+### Comments and documentation
+
+- Document component contracts through a `Props` interface in reusable `.astro` components.
+- Explain intent, accessibility decisions, and non-obvious trade-offs; do not restate visible markup, class names, or straightforward control flow.
+- Keep comments current with the implementation. An outdated comment is a defect and should be corrected or removed in the same change.
+
 ### Testability
 
 - Every interactive element MUST include a `data-testid` attribute

@@ -51,9 +51,17 @@ export async function getAllGameIds(db: Database): Promise<number[]> {
 }
 ```
 
+- Add a TSDoc/JSDoc comment to every exported function in `db/` and `src/lib/`. The comment must state the function's purpose, document each `@param` (including the injectable `db` dependency), and document the `@returns` value. Keep the explanation focused on behavior or intent rather than restating the implementation.
 - Always `order by` a stable column (title) so static builds are deterministic.
 - Map raw rows to the app-facing `Game`/`Publisher`/`Category` types in one place; don't leak Drizzle row shapes into components.
 - Keep ordering/lookup logic in `games.ts`, not in pages.
+
+## Comments and TypeScript formatting
+
+- Prefer comments that explain why a query, transform, or schema choice exists; do not add comments that paraphrase the next line.
+- Use explicit parameter and return types for exported functions and typed callbacks when inference would hide the contract.
+- Use single quotes, semicolons, and trailing commas in multiline declarations. Use `interface` for object contracts and `import type` for type-only imports; ESLint enforces the type-only import convention.
+- Keep comments current with the code they describe. Delete comments that are no longer accurate instead of preserving historical explanations.
 
 ## Determinism
 
