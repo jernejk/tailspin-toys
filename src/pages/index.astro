@@ -84,7 +84,7 @@ const publishers = [...new Map(
       ) : (
         <>
           <p class="mb-4 text-sm text-slate-400" data-testid="filter-results-count" aria-live="polite">
-            Showing {games.length} games
+            Showing {games.length} {games.length === 1 ? 'game' : 'games'}
           </p>
           <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3" data-testid="games-grid">
             {games.map((game) => (

@@ -74,6 +74,10 @@ describe('games data-access helpers', () => {
             .insert(categories)
             .values({ name: 'Party', description: 'party' })
             .returning({ id: categories.id });
+        const [unselected] = await db
+            .insert(categories)
+            .values({ name: 'Unselected', description: 'unselected' })
+            .returning({ id: categories.id });
         const [publisher] = await db
             .insert(publishers)
             .values({ name: 'Pub One', description: 'publisher' })
@@ -94,6 +98,13 @@ describe('games data-access helpers', () => {
                 categoryId: party.id,
                 publisherId: publisher.id,
             },
+            {
+                title: 'Hidden Category',
+                description: 'unselected category game',
+                starRating: 4,
+                categoryId: unselected.id,
+                publisherId: publisher.id,
+            },
         ]);
 
         const filtered = await getGamesByFilters(db, {
@@ -107,6 +118,10 @@ describe('games data-access helpers', () => {
         const [category] = await db
             .insert(categories)
             .values({ name: 'Strategy', description: 'strategy' })
+            .returning({ id: categories.id });
+        const [unselected] = await db
+            .insert(categories)
+            .values({ name: 'Unselected', description: 'unselected' })
             .returning({ id: categories.id });
         const [publisherOne] = await db
             .insert(publishers)
@@ -131,6 +146,13 @@ describe('games data-access helpers', () => {
                 starRating: 4,
                 categoryId: category.id,
                 publisherId: publisherTwo.id,
+            },
+            {
+                title: 'Wrong Category',
+                description: 'different category',
+                starRating: 4,
+                categoryId: unselected.id,
+                publisherId: publisherOne.id,
             },
         ]);
 
