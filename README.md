@@ -115,6 +115,10 @@ The **quality-checks** skill (`.github/skills/quality-checks/SKILL.md`) wraps th
 - Diagnosing test failures (port conflicts, stale servers, flaky tests, CI divergence)
 - Validating readiness before commits, pushes, or merges
 
+### finish-step Skill
+
+The **finish-step** skill (`.github/skills/finish-step/SKILL.md`) captures the lesson closeout flow. Use it via `/finish-step` after lesson work has been committed to push the branch, create or reuse a PR, merge to `main`, delete the remote branch, prune stale refs, and report any local branch cleanup that cannot be completed from the active worktree.
+
 ### GitHub Copilot App Run Menu
 
 The [GitHub Copilot app](https://github.com/github/github-app) reads
